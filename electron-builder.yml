@@ -19,9 +19,5 @@ mac:
 dmg:
   artifactName: PromptBetter-${version}-${arch}.dmg
 
-nsis:
-  oneClick: false
-  perMachine: false
-
 linux:
   target: AppImage

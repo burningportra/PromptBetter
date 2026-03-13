@@ -1,9 +1,9 @@
 // Pattern definitions — static data, zero runtime logic.
 
-export interface Pattern {
+import type { PatternBase } from './types'
+
+export interface Pattern extends PatternBase {
   id: string
-  label: string
-  description: string
   example?: string
 }
 

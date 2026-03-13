@@ -118,7 +118,7 @@ const FORBIDDEN_NODE_APIS_IN_CORE = [
   'net',
   'http',
   'https',
-  'crypto', // use Web Crypto API instead
+  'crypto', // inject a crypto abstraction via argument instead; core/ must be portable
 ]
 
 // ---------------------------------------------------------------------------

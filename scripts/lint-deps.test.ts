@@ -15,7 +15,8 @@ import * as os from 'os'
 import { execFileSync } from 'child_process'
 
 const SCRIPT = path.join(__dirname, 'lint-deps.ts')
-const TSX = path.join(__dirname, '..', 'node_modules', '.bin', 'tsx')
+// Resolve tsx from the nearest node_modules — works in both local and CI layouts
+const TSX = require.resolve('.bin/tsx', { paths: [path.join(__dirname, '..')] })
 
 function runLinter(cwd: string): { stdout: string; stderr: string; exitCode: number } {
   try {

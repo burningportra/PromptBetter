@@ -7,6 +7,7 @@
  */
 
 import { Command } from 'commander'
+import { DEFAULT_MODEL, DEFAULT_PRESET } from '../shared/constants'
 
 const program = new Command()
 
@@ -17,8 +18,8 @@ program
 
 program
   .argument('[prompt]', 'Prompt to improve (or reads from stdin)')
-  .option('-m, --model <model>', 'Model to use', 'anthropic/claude-3-5-sonnet')
-  .option('--preset <preset>', 'Pattern preset', 'code')
+  .option('-m, --model <model>', 'Model to use', DEFAULT_MODEL)
+  .option('--preset <preset>', 'Pattern preset', DEFAULT_PRESET)
   .action((_prompt: string | undefined, _options: Record<string, string>) => {
     console.log('CLI not yet implemented. Use the Electron app.')
     process.exit(1)

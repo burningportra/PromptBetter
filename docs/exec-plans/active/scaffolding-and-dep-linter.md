@@ -30,7 +30,7 @@ Bootstrap the PromptBetter Electron project (package.json, TypeScript, Tailwind,
 
 ## Dependency Graph
 
-```
+```text
 T1: package.json
 T2: tsconfigs           depends_on: [T1]
 T3: electron-vite.config.ts  depends_on: [T1, T2]

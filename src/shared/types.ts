@@ -26,10 +26,14 @@ export interface ImproveResponse {
   durationMs: number
 }
 
-export interface PatternMatch {
-  patternId: string
+/** Shared base for pattern metadata — used by both Pattern (definition) and PatternMatch (result). */
+export interface PatternBase {
   label: string
   description: string
+}
+
+export interface PatternMatch extends PatternBase {
+  patternId: string
   lineRange?: [number, number]
 }
 
