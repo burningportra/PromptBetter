@@ -816,7 +816,8 @@ interface StoreSchema {
 interface Preset {
   id: string;
   name: string;
-  patterns: string[];
+  intent: IntentType;      // e.g. 'code-review', 'debugging', or 'auto-detect'
+  patterns: PatternName[];
   isBuiltIn: boolean;
 }
 
@@ -848,7 +849,7 @@ interface HistoryEntry {
 | Default Model | Dropdown | claude-3.5-haiku | OpenRouter model for prompt improvement |
 | Terminal Mode | Dropdown | tmux | tmux or clipboard-paste |
 | tmux Session | Dropdown | Auto-detect | Target session for dispatch; auto-detects Claude Code panes |
-| Annotations | Toggle | Off | Show/hide pattern annotations inline below output |
+| Annotations | Toggle | On | Show/hide pattern annotations inline below output; auto-disables after 14 days from installedAt |
 | Theme | Toggle | System | Dark, light, or system preference |
 | Global Hotkey | Key combo | Cmd+Shift+P | System-wide activation shortcut |
 | Auto-hide after send | Toggle | On | Panel hides after successful dispatch (Quick Mode) |

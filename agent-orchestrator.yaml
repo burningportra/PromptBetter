@@ -1,0 +1,14 @@
+dataDir: ~/.agent-orchestrator
+worktreeDir: ~/.worktrees
+port: 3000
+defaults:
+  runtime: tmux
+  agent: claude-code
+  workspace: worktree
+  notifiers:
+    - desktop
+projects:
+  PromptBetter:
+    repo: burningportra/PromptBetter
+    path: /Volumes/1tb/Projects/PromptBetter
+    defaultBranch: main
