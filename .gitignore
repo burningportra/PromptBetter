@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+release/
+.DS_Store
+*.log
+*.lock
+!package-lock.json
+.env
+.env.local
+
+# electron-builder
+dist-electron/
