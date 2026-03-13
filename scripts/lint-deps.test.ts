@@ -106,6 +106,24 @@ describe('lint-deps: forbidden Node.js APIs in core/', () => {
     expect(result.stderr).toContain('portable')
   })
 
+  it('catches node:-prefixed child_process in core/ (bypass prevention)', () => {
+    const tmp = makeTmpDir()
+    writeFile(tmp, 'src/core/improve.ts', "import { execFile } from 'node:child_process'\n")
+
+    const result = runLinter(tmp)
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('child_process')
+  })
+
+  it('catches node:-prefixed fs in core/', () => {
+    const tmp = makeTmpDir()
+    writeFile(tmp, 'src/core/improve.ts', "import fs from 'node:fs'\n")
+
+    const result = runLinter(tmp)
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('fs')
+  })
+
   it('catches electron import in core/', () => {
     const tmp = makeTmpDir()
     writeFile(tmp, 'src/core/improve.ts', "import { app } from 'electron'\n")
@@ -124,20 +142,29 @@ describe('lint-deps: forbidden Node.js APIs in core/', () => {
   })
 })
 
-describe('lint-deps: exec() string interpolation', () => {
-  it('catches exec() with template literal', () => {
+describe('lint-deps: exec() is forbidden (use execFile)', () => {
+  it('catches exec() with template literal (interpolation risk)', () => {
     const tmp = makeTmpDir()
     writeFile(tmp, 'src/main/tmux.ts', 'import { exec } from "child_process"\nexec(`tmux send-keys -t ${session} "${cmd}" Enter`)\n')
 
     const result = runLinter(tmp)
     expect(result.exitCode).toBe(1)
-    expect(result.stderr).toContain('command injection')
+    expect(result.stderr).toContain('injection')
+    expect(result.stderr).toContain('execFile')
+  })
+
+  it('catches exec() with constant string (still forbidden)', () => {
+    const tmp = makeTmpDir()
+    writeFile(tmp, 'src/main/tmux.ts', 'import { exec } from "child_process"\nexec("ls -la")\n')
+
+    const result = runLinter(tmp)
+    expect(result.exitCode).toBe(1)
     expect(result.stderr).toContain('execFile')
   })
 
   it('allows execFile() calls', () => {
     const tmp = makeTmpDir()
-    writeFile(tmp, 'src/main/tmux.ts', 'import { execFile } from "child_process"\nexecFile("tmux", ["send-keys", "-t", session, cmd, "Enter"])\n')
+    writeFile(tmp, 'src/main/tmux.ts', 'import { execFile } from "child_process"\nexecFile("tmux", ["send-keys", "-t", "session", "cmd", "Enter"])\n')
 
     const result = runLinter(tmp)
     expect(result.exitCode).toBe(0)

@@ -199,49 +199,42 @@ function extractImports(source: string): Array<{ importPath: string; lineIndex: 
   return results
 }
 
-/** Check for exec() calls with string interpolation in any file. */
-function checkExecStringInterpolation(source: string, filePath: string): Violation[] {
+/** Check for exec() calls (all forms are forbidden; use execFile with array args). */
+function checkExecCalls(source: string, filePath: string): Violation[] {
   const violations: Violation[] = []
   const lines = source.split('\n')
-  // Match exec(`...`) or exec('...'+...) — any exec with potential string concat/template
-  // We flag: exec( followed by a backtick or string with + operator
-  const EXEC_TEMPLATE = /\bexec\s*\(\s*[`'"]/g
-  const EXEC_CONCAT = /\bexec\s*\(\s*['"][^'"]*['"]\s*\+/g
+  // Match any exec( call that is not execFile / execFileSync / execSync
+  // We look for word-boundary exec( where the preceding chars are not "File" or "Sync"
+  const EXEC_CALL = /\bexec\s*\(/g
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (!line) continue
+    // Skip comment lines
+    if (/^\s*(\/\/|\/\*|\*)/.test(line)) continue
 
+    EXEC_CALL.lastIndex = 0
     let m: RegExpExecArray | null
-
-    EXEC_TEMPLATE.lastIndex = 0
-    while ((m = EXEC_TEMPLATE.exec(line)) !== null) {
-      // Allow: execFile, execSync with template if args are array... but exec() itself is always suspect
-      // Only flag plain exec(), not execFile
+    while ((m = EXEC_CALL.exec(line)) !== null) {
+      // Allow execFile, execFileSync, execSync — only flag bare exec()
       const before = line.slice(0, m.index)
-      if (/execFile|execFileSync/.test(before.slice(-10))) continue
+      if (/(?:execFile|execFileSync|execSync)\s*$/.test(before + 'exec')) continue
+      // Check the chars immediately before "exec" in the original match
+      const matchStr = line.slice(m.index)
+      if (/^execFile|^execFileSync|^execSync/.test(matchStr.slice(4))) continue
+      // Distinguish: interpolation/concat (higher risk) vs plain string (still forbidden)
+      const after = line.slice(m.index + m[0].length)
+      const hasInterpolation = after.startsWith('`') || /^['"][^'"]*['"]\s*\+/.test(after)
+      const message = hasInterpolation
+        ? 'exec() with string interpolation/concatenation — command injection risk.'
+        : 'exec() is forbidden — ARCHITECTURE.md requires execFile() with array args for all shell calls.'
       violations.push({
         file: filePath,
         line: i + 1,
         column: m.index + 1,
-        rule: 'no-exec-string',
-        message: 'exec() with string/template argument detected — vulnerable to command injection.',
-        fix: 'Use execFile(command, [arg1, arg2]) with an array of arguments instead of exec() with string interpolation. See docs/SECURITY.md.',
-        snippet: line.trim(),
-      })
-    }
-
-    EXEC_CONCAT.lastIndex = 0
-    while ((m = EXEC_CONCAT.exec(line)) !== null) {
-      const before = line.slice(0, m.index)
-      if (/execFile|execFileSync/.test(before.slice(-10))) continue
-      violations.push({
-        file: filePath,
-        line: i + 1,
-        column: m.index + 1,
-        rule: 'no-exec-string',
-        message: 'exec() with string concatenation detected — vulnerable to command injection.',
-        fix: 'Use execFile(command, [arg1, arg2]) with an array of arguments instead. See docs/SECURITY.md.',
+        rule: 'no-exec',
+        message,
+        fix: 'Use execFile(command, [arg1, arg2]) with an array of arguments. See docs/SECURITY.md.',
         snippet: line.trim(),
       })
     }
@@ -257,21 +250,23 @@ function checkAnyTypes(source: string, filePath: string, layer: Layer): Violatio
   const violations: Violation[] = []
   const lines = source.split('\n')
 
-  // Match `: any` type annotations — but not in comments
-  const ANY_PATTERN = /(?<![/]{2}.*)\bany\b/g
+  // Match `any` type annotations — strip inline comments before matching to avoid false positives
+  const ANY_PATTERN = /\bany\b/g
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (!line) continue
     // Skip pure comment lines
     if (/^\s*(\/\/|\/\*|\*)/.test(line)) continue
+    // Strip inline comments (// ...) before pattern matching
+    const lineWithoutComment = line.replace(/\/\/.*$/, '')
 
     ANY_PATTERN.lastIndex = 0
     let m: RegExpExecArray | null
-    while ((m = ANY_PATTERN.exec(line)) !== null) {
+    while ((m = ANY_PATTERN.exec(lineWithoutComment)) !== null) {
       // Confirm it's used as a type, not a variable name (rough heuristic)
-      const before = line.slice(0, m.index)
-      const after = line.slice(m.index + 3)
+      const before = lineWithoutComment.slice(0, m.index)
+      const after = lineWithoutComment.slice(m.index + 3)
       const isTypeContext =
         /:\s*$/.test(before) ||
         /as\s+$/.test(before) ||
@@ -339,14 +334,16 @@ function lint(srcRoot: string): Violation[] {
       if (toLayer === null) {
         // Third-party or non-resolvable import — check Node.js API if in core/
         if (fromLayer === 'core') {
-          const forbidden = FORBIDDEN_NODE_APIS_IN_CORE.find((api) => importPath === api || importPath.startsWith(api + '/'))
+          // Normalize node:-prefixed specifiers (e.g. 'node:fs' → 'fs')
+          const normalizedImport = importPath.startsWith('node:') ? importPath.slice(5) : importPath
+          const forbidden = FORBIDDEN_NODE_APIS_IN_CORE.find((api) => normalizedImport === api || normalizedImport.startsWith(api + '/'))
           if (forbidden) {
             violations.push({
               file: filePath,
               line: lineIndex + 1,
               column: 1,
               rule: 'no-nodejs-in-core',
-              message: `core/ cannot import Node.js built-in '${forbidden}'.`,
+              message: `core/ cannot import Node.js built-in '${importPath}' (resolved: '${forbidden}').`,
               fix: `core/ must be portable (runs in Electron + CLI). Pass I/O values as function arguments instead, or move the logic to main/. See ARCHITECTURE.md → Layer Definitions → src/core/.`,
               snippet: (lines[lineIndex] ?? '').trim(),
             })
@@ -371,7 +368,7 @@ function lint(srcRoot: string): Violation[] {
     }
 
     // 2. Check exec() string interpolation
-    violations.push(...checkExecStringInterpolation(source, filePath))
+    violations.push(...checkExecCalls(source, filePath))
 
     // 3. Check `any` types in core/ and shared/
     violations.push(...checkAnyTypes(source, filePath, fromLayer))
