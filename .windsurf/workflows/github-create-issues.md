@@ -1,0 +1,4 @@
+---
+auto_execution_mode: 3
+---
+OK so please take ALL of that and elaborate on it more and then create a comprehensive and granular set of Github issues, linked by Epic, for all this with tasks, subtasks, and dependency structure overlaid, with detailed comments so that the whole thing is totally self-contained and self-documenting (including relevant background, reasoning/justification, considerations, etc.-- anything we'd want our "future self" to know about the goals and intentions and thought process and how it serves the over-arching goals of the project.) Use the 'gh' edit tool repeatedly to create the actual issues. Use /effort max.
