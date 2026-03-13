@@ -169,6 +169,14 @@ describe('lint-deps: exec() is forbidden (use execFile)', () => {
     const result = runLinter(tmp)
     expect(result.exitCode).toBe(0)
   })
+
+  it('does not flag regex.exec() method calls', () => {
+    const tmp = makeTmpDir()
+    writeFile(tmp, 'src/main/parse.ts', 'const re = /foo/g\nconst m = re.exec("bar")\n')
+
+    const result = runLinter(tmp)
+    expect(result.exitCode).toBe(0)
+  })
 })
 
 describe('lint-deps: no `any` in core/ and shared/', () => {

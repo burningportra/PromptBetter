@@ -203,9 +203,9 @@ function extractImports(source: string): Array<{ importPath: string; lineIndex: 
 function checkExecCalls(source: string, filePath: string): Violation[] {
   const violations: Violation[] = []
   const lines = source.split('\n')
-  // Match any exec( call that is not execFile / execFileSync / execSync
-  // We look for word-boundary exec( where the preceding chars are not "File" or "Sync"
-  const EXEC_CALL = /\bexec\s*\(/g
+  // Match bare exec( — word boundary, not preceded by '.' (excludes regex.exec(), str.exec())
+  // and not followed by File/FileSync/Sync suffix (those are the safe variants)
+  const EXEC_CALL = /(?<!\.)(?<!\w)\bexec\s*\(/g
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]

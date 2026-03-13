@@ -19,7 +19,7 @@ Bootstrap the PromptBetter Electron project (package.json, TypeScript, Tailwind,
 ## Approach
 
 1. **Create `package.json`** — Electron 33, React 18, Tailwind 3.4, Zustand 5, TypeScript, electron-vite, electron-builder, Vitest, tsx, and all peer deps.
-2. **Create TypeScript configs** — `tsconfig.json` (renderer), `tsconfig.node.json` (main/preload), `tsconfig.base.json`.
+2. **Create TypeScript configs** — `tsconfig.json` (renderer, rootDir=src) and `tsconfig.node.json` (main/preload/core/cli/scripts, moduleResolution=node).
 3. **Create `electron-vite.config.ts`** — Vite config for main, preload, renderer.
 4. **Create `tailwind.config.js` + `postcss.config.js`** — dark mode: 'class'.
 5. **Create `electron-builder.yml`** — macOS .dmg target.
