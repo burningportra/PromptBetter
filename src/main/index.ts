@@ -4,8 +4,12 @@ import { join } from 'path'
 import { DEFAULT_HOTKEY, PANEL_WIDTH, PANEL_HEIGHT } from '../shared/constants'
 import { IPC } from '../shared/types'
 import { registerIpcHandlers } from './ipc'
-import { migrateStore } from './store'
+import { migrateStore, store } from './store'
 import { createTray, destroyTray } from './tray'
+import { initLogger, createLogger } from './logger'
+import type { LogLevel } from './logger'
+
+const logger = createLogger('main')
 
 let mainWindow: BrowserWindow | null = null
 
@@ -76,15 +80,19 @@ function registerHotkey(): void {
     if (mainWindow.isVisible()) {
       mainWindow.hide()
       restoreFrontApp()
+      logger.debug('Panel hidden via hotkey')
     } else {
       captureFrontApp()
       mainWindow.show()
       mainWindow.focus()
+      logger.debug('Panel shown via hotkey')
     }
   })
 
   if (!registered) {
-    console.error(`Failed to register hotkey: ${DEFAULT_HOTKEY}`)
+    logger.error('Failed to register hotkey', { hotkey: DEFAULT_HOTKEY })
+  } else {
+    logger.info('Hotkey registered', { hotkey: DEFAULT_HOTKEY })
   }
 }
 
@@ -94,6 +102,14 @@ function registerHotkey(): void {
 
 app.whenReady().then(() => {
   migrateStore()
+
+  // Initialize logger before anything else so all subsequent logs are captured
+  const logDir = app.getPath('logs')
+  const settings = store.get('settings')
+  initLogger(logDir, (settings.logLevel ?? 'info') as LogLevel)
+
+  logger.info('App starting', { version: app.getVersion(), platform: process.platform })
+
   registerIpcHandlers()
   createWindow()
   registerHotkey()
@@ -120,6 +136,8 @@ app.whenReady().then(() => {
     },
   )
 
+  logger.info('App ready')
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -134,6 +152,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  logger.info('App quitting')
   globalShortcut.unregisterAll()
   destroyTray()
 })

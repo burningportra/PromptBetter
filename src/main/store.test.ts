@@ -36,6 +36,7 @@ vi.mock('../shared/constants', () => ({
   DEFAULT_PRESET: 'code',
   DEFAULT_HOTKEY: 'CommandOrControl+Shift+P',
   MAX_HISTORY_ENTRIES: 1000,
+  DEFAULT_LOG_LEVEL: 'info',
 }))
 
 const { migrateStore } = await import('./store')

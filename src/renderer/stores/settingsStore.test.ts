@@ -27,6 +27,7 @@ const makeSettings = (overrides?: Partial<AppSettings>): AppSettings => ({
   theme: 'dark',
   hotkey: 'CommandOrControl+Shift+P',
   maxHistoryEntries: 1000,
+  logLevel: 'info',
   ...overrides,
 })
 

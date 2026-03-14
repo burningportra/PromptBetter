@@ -1,6 +1,6 @@
 import Store from 'electron-store'
 import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
-import { DEFAULT_MODEL, DEFAULT_PRESET, DEFAULT_HOTKEY, MAX_HISTORY_ENTRIES } from '../shared/constants'
+import { DEFAULT_MODEL, DEFAULT_PRESET, DEFAULT_HOTKEY, MAX_HISTORY_ENTRIES, DEFAULT_LOG_LEVEL } from '../shared/constants'
 
 /** Settings without apiKey — the key is stored separately in the OS keychain via keytar. */
 export type SettingsWithoutApiKey = Omit<AppSettings, 'apiKey'>
@@ -40,6 +40,7 @@ const defaults = {
     theme: 'system',
     hotkey: DEFAULT_HOTKEY,
     maxHistoryEntries: MAX_HISTORY_ENTRIES,
+    logLevel: DEFAULT_LOG_LEVEL,
   },
   presets: [] as Preset[],
   history: [] as HistoryEntry[],

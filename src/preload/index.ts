@@ -44,6 +44,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Window management
   hideWindow: (): Promise<void> => ipcRenderer.invoke(IPC.HIDE_WINDOW),
+
+  // Logging
+  getLogPath: (): Promise<string | null> => ipcRenderer.invoke(IPC.GET_LOG_PATH),
 })
 
 export type ElectronAPI = typeof import('./index')
