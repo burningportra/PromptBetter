@@ -1,0 +1,23 @@
+appId: com.promptbetter.app
+productName: PromptBetter
+copyright: Copyright © 2026
+
+directories:
+  buildResources: build
+  output: dist
+
+files:
+  - out/**/*
+  - '!out/**/*.map'
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+
+dmg:
+  artifactName: PromptBetter-${version}-${arch}.dmg
+
+linux:
+  target: AppImage
