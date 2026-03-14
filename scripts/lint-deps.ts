@@ -305,7 +305,7 @@ function walkDir(dir: string, exts: string[]): string[] {
   for (const entry of entries) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'out' || entry.name === 'dist') continue
+      if (['node_modules', 'out', 'dist', '__structural__'].includes(entry.name)) continue
       results.push(...walkDir(full, exts))
     } else if (entry.isFile() && exts.some((e) => entry.name.endsWith(e))) {
       results.push(full)
