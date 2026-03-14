@@ -13,7 +13,11 @@ const isMac =
   typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')
 const modKey = isMac ? '⌘' : 'Ctrl'
 
-export function Panel(): React.ReactElement {
+interface PanelProps {
+  onOpenSettings: () => void
+}
+
+export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
   const {
     input,
     output,
@@ -117,7 +121,7 @@ export function Panel(): React.ReactElement {
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      {/* Top toolbar: preset + model */}
+      {/* Top toolbar: preset + model + gear */}
       <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-gray-700/60 flex-shrink-0">
         <span className="text-xs text-gray-500 flex-shrink-0">Preset</span>
         <PresetDropdown
@@ -132,6 +136,20 @@ export function Panel(): React.ReactElement {
           onChange={setActiveModel}
           disabled={loading}
         />
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          aria-label="Open settings"
+          title="Settings"
+          className="
+            flex-shrink-0 text-gray-500 hover:text-gray-300 text-base leading-none
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
+            transition-colors
+          "
+          style={{ touchAction: 'manipulation' }}
+        >
+          ⚙
+        </button>
       </div>
 
       {/* Input area */}

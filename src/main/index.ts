@@ -3,6 +3,7 @@ import { join } from 'path'
 import { DEFAULT_HOTKEY, PANEL_WIDTH, PANEL_HEIGHT } from '../shared/constants'
 import { IPC } from '../shared/types'
 import { registerIpcHandlers } from './ipc'
+import { migrateStore } from './store'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -51,6 +52,7 @@ function registerHotkey(): void {
 }
 
 app.whenReady().then(() => {
+  migrateStore()
   registerIpcHandlers()
   createWindow()
   registerHotkey()

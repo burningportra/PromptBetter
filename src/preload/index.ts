@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.GET_SETTINGS),
   setSettings: (patch: Partial<AppSettings>): Promise<void> =>
     ipcRenderer.invoke(IPC.SET_SETTINGS, patch),
+  deleteApiKey: (): Promise<void> => ipcRenderer.invoke(IPC.DELETE_API_KEY),
 
   // History
   getHistory: (): Promise<HistoryEntry[]> => ipcRenderer.invoke(IPC.GET_HISTORY),

@@ -92,6 +92,7 @@ export interface IpcChannels {
   DISPATCH_PROMPT: 'dispatch-prompt'
   GET_SETTINGS: 'get-settings'
   SET_SETTINGS: 'set-settings'
+  DELETE_API_KEY: 'delete-api-key'
   GET_HISTORY: 'get-history'
   ADD_HISTORY_ENTRY: 'add-history-entry'
   CLEAR_HISTORY: 'clear-history'
@@ -111,6 +112,7 @@ export const IPC: IpcChannels = {
   DISPATCH_PROMPT: 'dispatch-prompt',
   GET_SETTINGS: 'get-settings',
   SET_SETTINGS: 'set-settings',
+  DELETE_API_KEY: 'delete-api-key',
   GET_HISTORY: 'get-history',
   ADD_HISTORY_ENTRY: 'add-history-entry',
   CLEAR_HISTORY: 'clear-history',

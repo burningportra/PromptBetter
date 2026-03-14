@@ -8,6 +8,7 @@ declare global {
       // Settings
       getSettings: () => Promise<AppSettings>
       setSettings: (patch: Partial<AppSettings>) => Promise<void>
+      deleteApiKey: () => Promise<void>
 
       // History
       getHistory: () => Promise<HistoryEntry[]>
