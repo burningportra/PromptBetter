@@ -40,6 +40,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Improve prompt (fires OpenRouter via main process in future; stub for now)
   improvePrompt: (request: ImproveRequest): Promise<ImproveResponse> =>
     ipcRenderer.invoke(IPC.IMPROVE_PROMPT, request),
+
+  // Window management
+  hideWindow: (): Promise<void> => ipcRenderer.invoke(IPC.HIDE_WINDOW),
 })
 
 export type ElectronAPI = typeof import('./index')

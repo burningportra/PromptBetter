@@ -1,6 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron'
 import { join } from 'path'
 import { DEFAULT_HOTKEY, PANEL_WIDTH, PANEL_HEIGHT } from '../shared/constants'
+import { IPC } from '../shared/types'
 import { registerIpcHandlers } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
@@ -73,3 +74,8 @@ app.on('will-quit', () => {
 
 // ping — kept for sanity-check in tests
 ipcMain.handle('ping', () => 'pong')
+
+// Explicit hide — called by renderer on Escape key
+ipcMain.handle(IPC.HIDE_WINDOW, () => {
+  mainWindow?.hide()
+})

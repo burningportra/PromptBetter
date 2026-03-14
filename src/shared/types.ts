@@ -103,6 +103,7 @@ export interface IpcChannels {
   LIST_TMUX_SESSIONS: 'list-tmux-sessions'
   GET_GIT_DIFF: 'get-git-diff'
   COPY_TO_CLIPBOARD: 'copy-to-clipboard'
+  HIDE_WINDOW: 'hide-window'
 }
 
 export const IPC: IpcChannels = {
@@ -121,6 +122,7 @@ export const IPC: IpcChannels = {
   LIST_TMUX_SESSIONS: 'list-tmux-sessions',
   GET_GIT_DIFF: 'get-git-diff',
   COPY_TO_CLIPBOARD: 'copy-to-clipboard',
+  HIDE_WINDOW: 'hide-window',
 }
 
 export type ErrorCode =

@@ -29,6 +29,9 @@ declare global {
 
       // Improve prompt
       improvePrompt: (request: ImproveRequest) => Promise<ImproveResponse>
+
+      // Window management
+      hideWindow: () => Promise<void>
     }
   }
 }
