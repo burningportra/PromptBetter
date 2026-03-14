@@ -17,12 +17,19 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   const [tmuxSession, setTmuxSession] = useState('')
 
   const apiKeyRef = useRef<HTMLInputElement>(null)
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Pre-fill masked placeholder if key is already set
   const hasExistingKey = Boolean(settings?.apiKey && settings.apiKey.length > 0)
 
   useEffect(() => {
     apiKeyRef.current?.focus()
+    return () => {
+      // Clear any pending "Saved ✓" reset timer on unmount
+      if (savedTimeoutRef.current !== null) {
+        clearTimeout(savedTimeoutRef.current)
+      }
+    }
   }, [])
 
   const handleSaveApiKey = useCallback(async () => {
@@ -41,7 +48,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
       await updateSettings({ apiKey: trimmed })
       setApiKeyInput('')
       setApiKeySaved(true)
-      setTimeout(() => setApiKeySaved(false), 2000)
+      if (savedTimeoutRef.current !== null) clearTimeout(savedTimeoutRef.current)
+      savedTimeoutRef.current = setTimeout(() => setApiKeySaved(false), 2000)
     } catch {
       setApiKeyError('Failed to save API key')
     } finally {

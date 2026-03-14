@@ -8,7 +8,10 @@ export type SettingsWithoutApiKey = Omit<AppSettings, 'apiKey'>
 export interface StoreSchema {
   /** Schema version — bump on breaking changes to trigger migrateStore(). */
   schemaVersion: number
-  /** ISO timestamp set on first launch — powers 14-day annotation auto-disable timer. */
+  /**
+   * ISO timestamp set on first launch — powers 14-day annotation auto-disable timer.
+   * NOT in defaults so electron-store never silently re-stamps it on restart.
+   */
   installedAt: string
   settings: SettingsWithoutApiKey
   /** Custom presets only. Built-in presets live in shared/patterns.ts. */
@@ -24,9 +27,13 @@ export interface StoreSchema {
 
 const CURRENT_SCHEMA_VERSION = 1
 
-const defaults: StoreSchema = {
+/**
+ * Intentionally excludes `installedAt` — it is set once explicitly by migrateStore()
+ * so electron-store cannot silently overwrite it with a new timestamp on each restart.
+ * Cast is safe: electron-store treats defaults as a deep partial fallback at runtime.
+ */
+const defaults = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
-  installedAt: new Date().toISOString(),
   settings: {
     defaultModel: DEFAULT_MODEL,
     defaultPreset: DEFAULT_PRESET,
@@ -34,10 +41,10 @@ const defaults: StoreSchema = {
     hotkey: DEFAULT_HOTKEY,
     maxHistoryEntries: MAX_HISTORY_ENTRIES,
   },
-  presets: [],
-  history: [],
-  feedbackAggregates: [],
-}
+  presets: [] as Preset[],
+  history: [] as HistoryEntry[],
+  feedbackAggregates: [] as FeedbackAggregate[],
+} as unknown as StoreSchema
 
 export const store = new Store<StoreSchema>({ defaults })
 
@@ -46,16 +53,15 @@ export const store = new Store<StoreSchema>({ defaults })
  * Called once on app startup, before IPC handlers register.
  *
  * v0 → v1: Set installedAt, reset feedbackAggregates, remove legacy apiKeyEncrypted.
+ *
+ * Post-migration: always ensure installedAt is stamped (covers fresh installs where
+ * schemaVersion defaults to 1 and the migration block is skipped).
  */
 export function migrateStore(): void {
   const version = store.get('schemaVersion', 0)
 
   if (version < 1) {
-    // Set installedAt only if not already present
-    if (!store.get('installedAt')) {
-      store.set('installedAt', new Date().toISOString())
-    }
-    // Ensure feedbackAggregates exists
+    // Ensure feedbackAggregates exists for stores upgraded from v0
     if (!store.get('feedbackAggregates')) {
       store.set('feedbackAggregates', [])
     }
@@ -67,4 +73,10 @@ export function migrateStore(): void {
   }
 
   // Future migrations: if (version < 2) { ... }
+
+  // Set installedAt once — runs for both first-time installs and v0→v1 upgrades.
+  // Never overwrites an existing value so the original install time is preserved.
+  if (!store.get('installedAt')) {
+    store.set('installedAt', new Date().toISOString())
+  }
 }

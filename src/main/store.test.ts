@@ -51,14 +51,41 @@ describe('migrateStore', () => {
     resetStorage()
   })
 
-  it('sets schemaVersion to 1 on a fresh store (version 0)', () => {
-    // Fresh store has no schemaVersion (get returns fallback 0)
+  // -------------------------------------------------------------------------
+  // v0 → v1 migration
+  // -------------------------------------------------------------------------
+
+  it('sets schemaVersion to 1 on a v0 store', () => {
     migrateStore()
     expect(mockStore.set).toHaveBeenCalledWith('schemaVersion', 1)
   })
 
-  it('sets installedAt on first migration when not already present', () => {
-    // storage has no installedAt
+  it('initializes feedbackAggregates to empty array when missing on v0 store', () => {
+    migrateStore()
+    const call = mockStore.set.mock.calls.find(([k]) => k === 'feedbackAggregates')
+    expect(call).toBeTruthy()
+    expect(call?.[1]).toEqual([])
+  })
+
+  it('does not touch feedbackAggregates if already set on v0 store', () => {
+    const existing = [{ id: 'a', thumbsUp: 5, thumbsDown: 2, lastUpdated: 0 }]
+    resetStorage({ feedbackAggregates: existing })
+    migrateStore()
+    const call = mockStore.set.mock.calls.find(([k]) => k === 'feedbackAggregates')
+    expect(call).toBeFalsy()
+  })
+
+  it('removes legacy apiKeyEncrypted field during v0→v1 migration', () => {
+    resetStorage({ apiKeyEncrypted: 'some-encrypted-blob' })
+    migrateStore()
+    expect(mockStore.delete).toHaveBeenCalledWith('apiKeyEncrypted')
+  })
+
+  // -------------------------------------------------------------------------
+  // installedAt — always set once, never overwritten
+  // -------------------------------------------------------------------------
+
+  it('sets installedAt on a fresh store (v0, no existing value)', () => {
     migrateStore()
     const installedAtCall = mockStore.set.mock.calls.find(([k]) => k === 'installedAt')
     expect(installedAtCall).toBeTruthy()
@@ -67,7 +94,15 @@ describe('migrateStore', () => {
     expect(new Date(ts).getFullYear()).toBeGreaterThanOrEqual(2024)
   })
 
-  it('does not overwrite installedAt if already set', () => {
+  it('sets installedAt on a fresh v1 install (installedAt missing since not in defaults)', () => {
+    // New install: schemaVersion=1 (from defaults), installedAt not in storage
+    resetStorage({ schemaVersion: 1 })
+    migrateStore()
+    const call = mockStore.set.mock.calls.find(([k]) => k === 'installedAt')
+    expect(call).toBeTruthy()
+  })
+
+  it('never overwrites an existing installedAt', () => {
     const existing = '2024-01-01T00:00:00.000Z'
     resetStorage({ installedAt: existing })
     migrateStore()
@@ -76,35 +111,17 @@ describe('migrateStore', () => {
     expect(storage['installedAt']).toBe(existing)
   })
 
-  it('initializes feedbackAggregates to empty array when missing', () => {
-    migrateStore()
-    const call = mockStore.set.mock.calls.find(([k]) => k === 'feedbackAggregates')
-    expect(call).toBeTruthy()
-    expect(call?.[1]).toEqual([])
-  })
+  // -------------------------------------------------------------------------
+  // Idempotency
+  // -------------------------------------------------------------------------
 
-  it('does not touch feedbackAggregates if already set', () => {
-    const existing = [{ id: 'a', thumbsUp: 5, thumbsDown: 2, lastUpdated: 0 }]
-    resetStorage({ feedbackAggregates: existing })
+  it('is idempotent on a fully migrated store with installedAt', () => {
+    const existing = '2024-06-01T00:00:00.000Z'
+    resetStorage({ schemaVersion: 1, installedAt: existing, feedbackAggregates: [] })
     migrateStore()
-    const call = mockStore.set.mock.calls.find(([k]) => k === 'feedbackAggregates')
-    expect(call).toBeFalsy()
-  })
-
-  it('removes legacy apiKeyEncrypted field during migration', () => {
-    resetStorage({ apiKeyEncrypted: 'some-encrypted-blob' })
-    migrateStore()
-    expect(mockStore.delete).toHaveBeenCalledWith('apiKeyEncrypted')
-  })
-
-  it('is idempotent — does not re-run migration when version is already 1', () => {
-    resetStorage({ schemaVersion: 1 })
-    migrateStore()
-    // No set calls should happen when already at v1
-    const setCalls = mockStore.set.mock.calls.filter(([k]) => k !== 'schemaVersion')
+    // Only allowable set: none (everything already present)
+    const setCalls = mockStore.set.mock.calls
     expect(setCalls).toHaveLength(0)
-    // schemaVersion set call should also not happen since version >= 1
-    const versionCalls = mockStore.set.mock.calls.filter(([k]) => k === 'schemaVersion')
-    expect(versionCalls).toHaveLength(0)
+    expect(mockStore.delete).not.toHaveBeenCalled()
   })
 })
