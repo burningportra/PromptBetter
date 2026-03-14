@@ -1,5 +1,6 @@
-import { ipcMain, safeStorage } from 'electron'
+import { ipcMain } from 'electron'
 import { store } from './store'
+import { getApiKey, setApiKey, deleteApiKey } from './keychain'
 import { IPC } from '../shared/types'
 import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
 import { listSessions, sendToTmux, sendViaClipboard } from './tmux'
@@ -55,46 +56,32 @@ function isValidFeedbackAggregate(v: unknown): v is FeedbackAggregate {
 }
 
 // ---------------------------------------------------------------------------
-// safeStorage helpers — OS-backed encryption for the API key
-// ---------------------------------------------------------------------------
-
-function encryptApiKey(apiKey: string): string {
-  if (!safeStorage.isEncryptionAvailable()) return apiKey
-  return safeStorage.encryptString(apiKey).toString('base64')
-}
-
-function decryptApiKey(encrypted: string): string {
-  if (!encrypted) return ''
-  if (!safeStorage.isEncryptionAvailable()) return encrypted
-  try {
-    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
-  } catch {
-    return ''
-  }
-}
-
-// ---------------------------------------------------------------------------
 // IPC handlers
 // ---------------------------------------------------------------------------
 
 export function registerIpcHandlers(): void {
-  // Settings — apiKey stored encrypted separately via safeStorage
-  ipcMain.handle(IPC.GET_SETTINGS, () => {
+  // Settings — apiKey fetched from OS keychain (keytar), never from electron-store
+  ipcMain.handle(IPC.GET_SETTINGS, async () => {
     const settings = store.get('settings')
-    const apiKey = decryptApiKey(store.get('apiKeyEncrypted'))
-    return { ...settings, apiKey }
+    const apiKey = (await getApiKey()) ?? ''
+    return { ...settings, apiKey } satisfies AppSettings
   })
 
-  ipcMain.handle(IPC.SET_SETTINGS, (_event, patch: unknown) => {
+  ipcMain.handle(IPC.SET_SETTINGS, async (_event, patch: unknown) => {
     if (!isValidSettingsPatch(patch)) throw new Error('Invalid settings patch')
     const { apiKey, ...rest } = patch as Partial<AppSettings>
-    if (apiKey !== undefined) {
-      store.set('apiKeyEncrypted', encryptApiKey(apiKey))
+    if (typeof apiKey === 'string' && apiKey.length > 0) {
+      await setApiKey(apiKey)
     }
     if (Object.keys(rest).length > 0) {
       const current = store.get('settings')
       store.set('settings', { ...current, ...rest })
     }
+  })
+
+  // Dedicated API key operations (used by SettingsPanel)
+  ipcMain.handle(IPC.DELETE_API_KEY, async () => {
+    await deleteApiKey()
   })
 
   // History
@@ -104,11 +91,13 @@ export function registerIpcHandlers(): void {
     if (!isValidHistoryEntry(entry)) throw new Error('Invalid history entry')
     const history = store.get('history')
     const settings = store.get('settings')
+    // Prepend newest entry, prune oldest beyond cap — feedbackAggregates untouched
     const updated = [entry, ...history].slice(0, settings.maxHistoryEntries)
     store.set('history', updated)
   })
 
   ipcMain.handle(IPC.CLEAR_HISTORY, () => {
+    // feedbackAggregates are stored at the top level and are NOT cleared here
     store.set('history', [])
   })
 
@@ -133,7 +122,7 @@ export function registerIpcHandlers(): void {
     store.set('presets', presets)
   })
 
-  // Feedback aggregates
+  // Feedback aggregates — stored separately, never pruned with history
   ipcMain.handle(IPC.GET_FEEDBACK_AGGREGATES, () => store.get('feedbackAggregates'))
 
   ipcMain.handle(IPC.SET_FEEDBACK_AGGREGATE, (_event, aggregate: unknown) => {
