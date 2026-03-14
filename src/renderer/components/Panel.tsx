@@ -3,6 +3,7 @@ import { usePromptStore } from '../stores/promptStore'
 import { usePresetsStore } from '../stores/presetsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { usePanelActions } from '../hooks/usePanelActions'
+import { useSecretDetection } from '../hooks/useSecretDetection'
 import { PresetDropdown, detectSlashCommand } from './PresetDropdown'
 import { ModelDropdown } from './ModelDropdown'
 import { TmuxDropdown } from './TmuxDropdown'
@@ -42,6 +43,9 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
   const [annotationEnabled, setAnnotationEnabled] = useState(false)
   // Stores the preset active before a slash command override
   const prevPresetRef = useRef<string>(activePreset)
+
+  const { matches: secretMatches, acknowledged: secretAcknowledged, acknowledge } = useSecretDetection(input)
+  const secretBlocked = secretMatches.length > 0 && !secretAcknowledged
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLTextAreaElement>(null)
@@ -97,23 +101,28 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
       }
       if (isMeta && e.shiftKey && e.key === 'Enter') {
         e.preventDefault()
-        if (!loading) handleImproveAndSend()
+        if (!loading && !secretBlocked) handleImproveAndSend()
         return
       }
       if (isMeta && e.key === 'Enter') {
         e.preventDefault()
-        if (!loading) handleImprove()
+        if (!loading && !secretBlocked) handleImprove()
         return
       }
     },
-    [loading, handleImprove, handleImproveAndSend],
+    [loading, secretBlocked, handleImprove, handleImproveAndSend],
   )
 
   // Derive feedback bar data (priority: secret warning > score > anti-pattern)
-  const secretWarning = error?.includes('SECRET') ? error : null
-  const qualityScore = !secretWarning && score ? score.overall : null
+  const qualityScore = !secretBlocked && score ? score.overall : null
   const antiPatternTip =
-    !secretWarning && !qualityScore && patterns.length > 0 ? patterns[0].description : null
+    !secretBlocked && !qualityScore && patterns.length > 0 ? patterns[0].description : null
+
+  const handleRemoveSecret = useCallback(() => {
+    if (secretMatches.length === 0) return
+    const first = secretMatches[0]
+    setInput(input.slice(0, first.index) + input.slice(first.index + first.length))
+  }, [secretMatches, input, setInput])
 
   return (
     <div
@@ -177,13 +186,16 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
           "
           style={{ fontSize: '16px', touchAction: 'manipulation', fontVariantNumeric: 'tabular-nums' }}
         />
-        <div className="flex items-center justify-between min-h-[18px] flex-shrink-0">
+        <div className="flex items-start justify-between min-h-[18px] flex-shrink-0">
           <FeedbackBar
-            secretWarning={secretWarning}
+            secretMatches={secretMatches}
+            secretAcknowledged={secretAcknowledged}
+            onAcknowledge={acknowledge}
+            onRemoveSecret={handleRemoveSecret}
             qualityScore={qualityScore}
             antiPatternTip={antiPatternTip}
           />
-          {error && !secretWarning && (
+          {error && !secretBlocked && (
             <p className="text-xs text-red-400 truncate ml-2" title={error}>
               {error}
             </p>
@@ -196,7 +208,7 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
         <button
           type="button"
           onClick={handleImprove}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || secretBlocked}
           aria-label={`Improve prompt (${modKey}+Enter)`}
           className="
             flex items-center justify-center gap-1 flex-1
@@ -214,7 +226,7 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
         <button
           type="button"
           onClick={handleImproveAndSend}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || secretBlocked}
           aria-label={`Improve and send (${modKey}+Shift+Enter)`}
           className="
             flex items-center justify-center gap-1 flex-1
@@ -292,7 +304,7 @@ export function Panel({ onOpenSettings }: PanelProps): React.ReactElement {
         <button
           type="button"
           onClick={handleSend}
-          disabled={loading || (!output && !input)}
+          disabled={loading || (!output && !input) || secretBlocked}
           aria-label="Send to terminal"
           className="
             flex-shrink-0 bg-green-700 hover:bg-green-600 border border-green-600
