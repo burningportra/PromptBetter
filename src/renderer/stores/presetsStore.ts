@@ -27,25 +27,28 @@ export const usePresetsStore = create<PresetsState>((set, get) => ({
   saveCustomPreset: async (preset) => {
     const previous = get().customPresets
     const idx = previous.findIndex((p) => p.id === preset.id)
-    const updated =
+    const optimistic =
       idx >= 0 ? previous.map((p) => (p.id === preset.id ? preset : p)) : [...previous, preset]
-    set({ customPresets: updated })
+    set({ customPresets: optimistic })
     try {
       await window.electronAPI.setPreset(preset)
     } catch (err) {
       console.error('[presetsStore] Failed to persist preset:', err)
-      set({ customPresets: previous })
+      // Only revert if a concurrent write hasn't already updated state further
+      set((state) => (state.customPresets === optimistic ? { customPresets: previous } : state))
     }
   },
 
   deleteCustomPreset: async (presetId) => {
     const previous = get().customPresets
-    set({ customPresets: previous.filter((p) => p.id !== presetId) })
+    const optimistic = previous.filter((p) => p.id !== presetId)
+    set({ customPresets: optimistic })
     try {
       await window.electronAPI.deletePreset(presetId)
     } catch (err) {
       console.error('[presetsStore] Failed to delete preset:', err)
-      set({ customPresets: previous })
+      // Only revert if a concurrent write hasn't already updated state further
+      set((state) => (state.customPresets === optimistic ? { customPresets: previous } : state))
     }
   },
 }))
