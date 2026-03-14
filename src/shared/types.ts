@@ -56,6 +56,8 @@ export interface HistoryEntry {
   durationMs: number
 }
 
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
+
 export interface AppSettings {
   apiKey: string
   defaultModel: string
@@ -63,6 +65,7 @@ export interface AppSettings {
   theme: 'dark' | 'light' | 'system'
   hotkey: string
   maxHistoryEntries: number
+  logLevel: LogLevel
 }
 
 export interface Preset {
@@ -105,6 +108,7 @@ export interface IpcChannels {
   GET_GIT_DIFF: 'get-git-diff'
   COPY_TO_CLIPBOARD: 'copy-to-clipboard'
   HIDE_WINDOW: 'hide-window'
+  GET_LOG_PATH: 'get-log-path'
 }
 
 export const IPC: IpcChannels = {
@@ -125,6 +129,7 @@ export const IPC: IpcChannels = {
   GET_GIT_DIFF: 'get-git-diff',
   COPY_TO_CLIPBOARD: 'copy-to-clipboard',
   HIDE_WINDOW: 'hide-window',
+  GET_LOG_PATH: 'get-log-path',
 }
 
 export type ErrorCode =

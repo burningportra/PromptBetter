@@ -15,6 +15,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   const [apiKeySaved, setApiKeySaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [tmuxSession, setTmuxSession] = useState('')
+  const [logPath, setLogPath] = useState<string | null>(null)
 
   const apiKeyRef = useRef<HTMLInputElement>(null)
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -23,8 +24,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   const hasExistingKey = Boolean(settings?.apiKey && settings.apiKey.length > 0)
 
   useEffect(() => {
+    let mounted = true
     apiKeyRef.current?.focus()
+    void window.electronAPI.getLogPath().then((path) => {
+      if (mounted) setLogPath(path)
+    })
     return () => {
+      mounted = false
       // Clear any pending "Saved ✓" reset timer on unmount
       if (savedTimeoutRef.current !== null) {
         clearTimeout(savedTimeoutRef.current)
@@ -190,6 +196,19 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
             Select a tmux session to dispatch improved prompts, or leave blank for clipboard.
           </p>
         </section>
+
+        {/* Log File */}
+        {logPath && (
+          <section>
+            <label className="block text-xs text-gray-400 mb-1">Log File</label>
+            <p
+              className="text-xs text-gray-500 break-all font-mono bg-gray-800 rounded px-2 py-1.5 select-text"
+              title={logPath}
+            >
+              {logPath}
+            </p>
+          </section>
+        )}
       </div>
     </div>
   )

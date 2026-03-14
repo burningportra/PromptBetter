@@ -33,6 +33,9 @@ declare global {
 
       // Window management
       hideWindow: () => Promise<void>
+
+      // Logging
+      getLogPath: () => Promise<string | null>
     }
   }
 }

@@ -2,9 +2,10 @@ import { ipcMain } from 'electron'
 import { store } from './store'
 import { getApiKey, setApiKey, deleteApiKey } from './keychain'
 import { IPC } from '../shared/types'
-import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
+import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate, LogLevel } from '../shared/types'
 import { listSessions, sendToTmux, sendViaClipboard } from './tmux'
 import { improvePrompt } from '../core/improve'
+import { setLogLevel, getLogPath } from './logger'
 
 // ---------------------------------------------------------------------------
 // Payload validators — parse at the IPC boundary, trust inside
@@ -18,10 +19,14 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+const VALID_LOG_LEVELS = new Set<string>(['error', 'warn', 'info', 'debug'])
+
 function isValidSettingsPatch(v: unknown): v is Partial<AppSettings> {
   if (!isObject(v)) return false
-  const allowed = new Set(['apiKey', 'defaultModel', 'defaultPreset', 'theme', 'hotkey', 'maxHistoryEntries'])
-  return Object.keys(v).every((k) => allowed.has(k))
+  const allowed = new Set(['apiKey', 'defaultModel', 'defaultPreset', 'theme', 'hotkey', 'maxHistoryEntries', 'logLevel'])
+  if (!Object.keys(v).every((k) => allowed.has(k))) return false
+  if ('logLevel' in v && !VALID_LOG_LEVELS.has(v['logLevel'] as string)) return false
+  return true
 }
 
 function isValidHistoryEntry(v: unknown): v is HistoryEntry {
@@ -77,6 +82,9 @@ export function registerIpcHandlers(): void {
     if (Object.keys(rest).length > 0) {
       const current = store.get('settings')
       store.set('settings', { ...current, ...rest })
+      if (rest.logLevel) {
+        setLogLevel(rest.logLevel as LogLevel)
+      }
     }
   })
 
@@ -185,4 +193,7 @@ export function registerIpcHandlers(): void {
       durationMs,
     }
   })
+
+  // Log path — exposed so Settings panel can show users where logs are written
+  ipcMain.handle(IPC.GET_LOG_PATH, () => getLogPath())
 }

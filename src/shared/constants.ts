@@ -1,6 +1,7 @@
 // Constants — shared across all layers.
 
 export const APP_NAME = 'PromptBetter'
+export const DEFAULT_LOG_LEVEL = 'info' as const
 export const DEFAULT_HOTKEY = 'CommandOrControl+Shift+P'
 export const DEFAULT_MODEL = 'anthropic/claude-3-5-sonnet'
 export const DEFAULT_PRESET = 'code'
