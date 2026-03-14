@@ -2,6 +2,7 @@ import { ipcMain, safeStorage } from 'electron'
 import { store } from './store'
 import { IPC } from '../shared/types'
 import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
+import { listSessions, sendToTmux, sendViaClipboard } from './tmux'
 
 // ---------------------------------------------------------------------------
 // Payload validators — parse at the IPC boundary, trust inside
@@ -145,5 +146,33 @@ export function registerIpcHandlers(): void {
       aggregates.push(aggregate)
     }
     store.set('feedbackAggregates', aggregates)
+  })
+
+  // Tmux session list
+  ipcMain.handle(IPC.LIST_TMUX_SESSIONS, () => listSessions())
+
+  // Dispatch prompt to tmux session with clipboard fallback
+  ipcMain.handle(IPC.DISPATCH_PROMPT, async (_event, payload: unknown) => {
+    if (!isObject(payload)) throw new Error('Invalid dispatch payload')
+    const { prompt, sessionName } = payload
+    if (typeof prompt !== 'string' || typeof sessionName !== 'string') {
+      throw new Error('Invalid dispatch payload fields')
+    }
+    try {
+      await sendToTmux(prompt, sessionName)
+      return { success: true, method: 'tmux' }
+    } catch {
+      // Fallback to clipboard
+      const copied = await sendViaClipboard(prompt)
+      return { success: copied, method: 'clipboard' }
+    }
+  })
+
+  // Improve prompt — wires through to OpenRouter (stub implementation)
+  ipcMain.handle(IPC.IMPROVE_PROMPT, async (_event, request: unknown) => {
+    if (!isObject(request)) throw new Error('Invalid improve request')
+    if (typeof request['prompt'] !== 'string') throw new Error('Missing prompt field')
+    // TODO: wire to core/openrouter.ts in issue #57
+    throw new Error('Not yet implemented')
   })
 }
