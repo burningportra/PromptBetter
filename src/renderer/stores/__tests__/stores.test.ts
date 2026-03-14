@@ -192,12 +192,32 @@ describe('historyStore', () => {
   })
 
   it('prepends new entries', async () => {
+    mockElectronAPI.getSettings.mockResolvedValue(makeSettings())
     mockElectronAPI.addHistoryEntry.mockResolvedValue(undefined)
     const e1 = makeEntry('e1')
     const e2 = makeEntry('e2')
     useHistoryStore.getState()._hydrate([e1])
     await useHistoryStore.getState().addEntry(e2)
     expect(useHistoryStore.getState().entries[0].id).toBe('e2')
+  })
+
+  it('reverts optimistic add on IPC failure', async () => {
+    mockElectronAPI.getSettings.mockResolvedValue(makeSettings())
+    mockElectronAPI.addHistoryEntry.mockRejectedValue(new Error('IPC failed'))
+    const e1 = makeEntry('e1')
+    useHistoryStore.getState()._hydrate([e1])
+    await useHistoryStore.getState().addEntry(makeEntry('e2'))
+    expect(useHistoryStore.getState().entries).toHaveLength(1)
+    expect(useHistoryStore.getState().entries[0].id).toBe('e1')
+  })
+
+  it('respects maxHistoryEntries cap', async () => {
+    mockElectronAPI.getSettings.mockResolvedValue(makeSettings({ maxHistoryEntries: 2 }))
+    mockElectronAPI.addHistoryEntry.mockResolvedValue(undefined)
+    useHistoryStore.getState()._hydrate([makeEntry('e1'), makeEntry('e2')])
+    await useHistoryStore.getState().addEntry(makeEntry('e3'))
+    expect(useHistoryStore.getState().entries).toHaveLength(2)
+    expect(useHistoryStore.getState().entries[0].id).toBe('e3')
   })
 
   it('clears history', async () => {

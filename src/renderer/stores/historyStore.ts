@@ -17,11 +17,16 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   _hydrate: (entries) => set({ entries, hydrated: true }),
 
   addEntry: async (entry) => {
-    set({ entries: [entry, ...get().entries] })
+    const previous = get().entries
+    const settings = await window.electronAPI.getSettings().catch(() => null)
+    const maxEntries = settings?.maxHistoryEntries ?? previous.length + 1
+    const optimistic = [entry, ...previous].slice(0, maxEntries)
+    set({ entries: optimistic })
     try {
       await window.electronAPI.addHistoryEntry(entry)
     } catch (err) {
       console.error('[historyStore] Failed to persist history entry:', err)
+      set({ entries: previous })
     }
   },
 
