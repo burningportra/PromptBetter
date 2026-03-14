@@ -87,7 +87,11 @@ export function createPanelActions(
       try {
         await navigator.clipboard.writeText(textToCopy)
       } catch {
-        await window.electronAPI.dispatchPrompt(textToCopy, '')
+        try {
+          await window.electronAPI.dispatchPrompt(textToCopy, '')
+        } catch (fallbackErr) {
+          console.error('[Panel] Copy fallback failed:', fallbackErr)
+        }
       }
     },
   }

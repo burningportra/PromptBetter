@@ -88,7 +88,7 @@ export function Panel(): React.ReactElement {
     (e: React.KeyboardEvent) => {
       const isMeta = e.metaKey || e.ctrlKey
       if (e.key === 'Escape') {
-        ;(document.activeElement as HTMLElement)?.blur()
+        void window.electronAPI.hideWindow()
         return
       }
       if (isMeta && e.shiftKey && e.key === 'Enter') {

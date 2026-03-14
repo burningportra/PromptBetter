@@ -8,6 +8,7 @@ vi.stubGlobal('window', {
   electronAPI: {
     improvePrompt: mockImprovePrompt,
     dispatchPrompt: mockDispatchPrompt,
+    hideWindow: vi.fn().mockResolvedValue(undefined),
   },
 })
 
@@ -219,6 +220,16 @@ describe('createPanelActions', () => {
       await handleCopy()
 
       expect(mockDispatchPrompt).toHaveBeenCalledWith('fallback', '')
+    })
+
+    it('handles double failure (clipboard + dispatchPrompt) without throwing', async () => {
+      mockClipboardWrite.mockRejectedValueOnce(new Error('denied'))
+      mockDispatchPrompt.mockRejectedValueOnce(new Error('dispatch failed'))
+
+      const store = makeStore({ output: 'fallback' })
+      const { handleCopy } = createPanelActions(defaultOpts, store)
+      // Should resolve without throwing
+      await expect(handleCopy()).resolves.toBeUndefined()
     })
   })
 })
