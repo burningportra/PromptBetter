@@ -1,4 +1,4 @@
-import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
+import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate, TmuxSession, ImproveRequest, ImproveResponse } from '../shared/types'
 
 declare global {
   interface Window {
@@ -22,6 +22,13 @@ declare global {
       // Feedback aggregates
       getFeedbackAggregates: () => Promise<FeedbackAggregate[]>
       setFeedbackAggregate: (aggregate: FeedbackAggregate) => Promise<void>
+
+      // Tmux
+      listTmuxSessions: () => Promise<TmuxSession[]>
+      dispatchPrompt: (prompt: string, sessionName: string) => Promise<{ success: boolean; method: string }>
+
+      // Improve prompt
+      improvePrompt: (request: ImproveRequest) => Promise<ImproveResponse>
     }
   }
 }

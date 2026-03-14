@@ -80,6 +80,13 @@ export interface FeedbackAggregate {
   lastUpdated: number
 }
 
+export interface TmuxSession {
+  name: string
+  attached: boolean
+  created: string
+  isClaudeCode: boolean
+}
+
 export interface IpcChannels {
   IMPROVE_PROMPT: 'improve-prompt'
   DISPATCH_PROMPT: 'dispatch-prompt'
@@ -95,6 +102,7 @@ export interface IpcChannels {
   SET_FEEDBACK_AGGREGATE: 'set-feedback-aggregate'
   LIST_TMUX_SESSIONS: 'list-tmux-sessions'
   GET_GIT_DIFF: 'get-git-diff'
+  COPY_TO_CLIPBOARD: 'copy-to-clipboard'
 }
 
 export const IPC: IpcChannels = {
@@ -112,6 +120,7 @@ export const IPC: IpcChannels = {
   SET_FEEDBACK_AGGREGATE: 'set-feedback-aggregate',
   LIST_TMUX_SESSIONS: 'list-tmux-sessions',
   GET_GIT_DIFF: 'get-git-diff',
+  COPY_TO_CLIPBOARD: 'copy-to-clipboard',
 }
 
 export type ErrorCode =
