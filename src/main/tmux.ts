@@ -91,6 +91,13 @@ export async function listSessions(): Promise<TmuxSession[]> {
       const attached = parts[parts.length - 2]
       const name = parts.slice(0, parts.length - 2).join(':')
       if (!name) continue
+      // Only surface sessions whose names pass sanitization — invalid names
+      // cannot be dispatched and should not appear as selectable options.
+      try {
+        sanitizeSessionName(name)
+      } catch {
+        continue
+      }
       sessions.push({
         name,
         attached: attached === '1',
@@ -117,7 +124,14 @@ export async function listSessions(): Promise<TmuxSession[]> {
  * Throws an AppError with code 'TMUX_DISPATCH_FAILED' on any failure.
  */
 export async function sendToTmux(prompt: string, sessionName: string): Promise<void> {
-  const safe = sanitizeSessionName(sessionName)
+  let safe: string
+  try {
+    safe = sanitizeSessionName(sessionName)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const appErr: AppError = { code: 'TMUX_DISPATCH_FAILED', message: msg }
+    throw appErr
+  }
 
   // Step 1 — load prompt into a named tmux buffer via stdin.
   await new Promise<void>((resolve, reject) => {
