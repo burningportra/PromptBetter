@@ -54,11 +54,33 @@ function rel(filePath: string): string {
   return relative(SRC_DIR, filePath)
 }
 
-/** Strip inline comments from a source line before pattern matching. */
+/**
+ * Strip inline comments from a source line before pattern matching.
+ * Tracks single-quote, double-quote, and backtick string contexts so that
+ * `//` sequences inside string literals (e.g. `http://`) are not mistaken
+ * for comment delimiters.
+ */
 function stripInlineComment(line: string): string {
-  // Simple strip: remove // ... but not inside string literals
-  // Good enough for structural grep — not a full parser
-  return line.replace(/(?<!['"`])\/\/.*$/, '')
+  let inSingle = false
+  let inDouble = false
+  let inBacktick = false
+
+  for (let i = 0; i < line.length - 1; i++) {
+    const ch = line[i]
+    const escaped = i > 0 && line[i - 1] === '\\'
+
+    if (ch === "'" && !escaped && !inDouble && !inBacktick) {
+      inSingle = !inSingle
+    } else if (ch === '"' && !escaped && !inSingle && !inBacktick) {
+      inDouble = !inDouble
+    } else if (ch === '`' && !escaped && !inSingle && !inDouble) {
+      inBacktick = !inBacktick
+    } else if (ch === '/' && line[i + 1] === '/' && !inSingle && !inDouble && !inBacktick) {
+      return line.slice(0, i)
+    }
+  }
+
+  return line
 }
 
 /** Return true if the line is a pure comment (//... or *... or /*...) */
