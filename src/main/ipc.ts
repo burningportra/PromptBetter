@@ -4,6 +4,7 @@ import { getApiKey, setApiKey, deleteApiKey } from './keychain'
 import { IPC } from '../shared/types'
 import type { AppSettings, HistoryEntry, Preset, FeedbackAggregate } from '../shared/types'
 import { listSessions, sendToTmux, sendViaClipboard } from './tmux'
+import { improvePrompt } from '../core/improve'
 
 // ---------------------------------------------------------------------------
 // Payload validators — parse at the IPC boundary, trust inside
@@ -157,11 +158,31 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Improve prompt — wires through to OpenRouter (stub implementation)
+  // Improve prompt — wires through the full improvement pipeline
   ipcMain.handle(IPC.IMPROVE_PROMPT, async (_event, request: unknown) => {
     if (!isObject(request)) throw new Error('Invalid improve request')
     if (typeof request['prompt'] !== 'string') throw new Error('Missing prompt field')
-    // TODO: wire to core/openrouter.ts in issue #57
-    throw new Error('Not yet implemented')
+
+    const apiKey = await getApiKey()
+    if (apiKey === null || apiKey.length === 0) {
+      throw { code: 'AUTH_FAILED', message: 'API key not configured. Please add your OpenRouter API key in Settings.' }
+    }
+
+    const startTime = Date.now()
+    const result = await improvePrompt(request['prompt'], apiKey, {
+      preset: typeof request['preset'] === 'string' ? request['preset'] : undefined,
+      terminalContext: typeof request['terminalContext'] === 'string' ? request['terminalContext'] : undefined,
+      gitDiff: typeof request['gitDiff'] === 'string' ? request['gitDiff'] : undefined,
+      model: typeof request['model'] === 'string' ? request['model'] : undefined,
+      annotations: true,
+    })
+    const durationMs = Date.now() - startTime
+
+    return {
+      improved: result.improvedPrompt,
+      patterns: (result.patterns ?? []).map((p) => ({ patternId: p, label: p, description: '' })),
+      score: { overall: 0, specificity: 0, actionability: 0, contextRichness: 0, antiPatternPenalty: 0 },
+      durationMs,
+    }
   })
 }
