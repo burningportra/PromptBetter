@@ -1,6 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron'
 import { join } from 'path'
 import { DEFAULT_HOTKEY, PANEL_WIDTH, PANEL_HEIGHT } from '../shared/constants'
+import { registerIpcHandlers } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -49,6 +50,7 @@ function registerHotkey(): void {
 }
 
 app.whenReady().then(() => {
+  registerIpcHandlers()
   createWindow()
   registerHotkey()
 
@@ -69,5 +71,5 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
-// IPC handlers — wired up here; implementation in ipc.ts (future)
+// ping — kept for sanity-check in tests
 ipcMain.handle('ping', () => 'pong')

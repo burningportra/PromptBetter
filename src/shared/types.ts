@@ -65,13 +65,34 @@ export interface AppSettings {
   maxHistoryEntries: number
 }
 
+export interface Preset {
+  id: string
+  name: string
+  description: string
+  systemPrompt: string
+  isBuiltIn: boolean
+}
+
+export interface FeedbackAggregate {
+  id: string
+  thumbsUp: number
+  thumbsDown: number
+  lastUpdated: number
+}
+
 export interface IpcChannels {
   IMPROVE_PROMPT: 'improve-prompt'
   DISPATCH_PROMPT: 'dispatch-prompt'
   GET_SETTINGS: 'get-settings'
   SET_SETTINGS: 'set-settings'
   GET_HISTORY: 'get-history'
+  ADD_HISTORY_ENTRY: 'add-history-entry'
   CLEAR_HISTORY: 'clear-history'
+  GET_PRESETS: 'get-presets'
+  SET_PRESET: 'set-preset'
+  DELETE_PRESET: 'delete-preset'
+  GET_FEEDBACK_AGGREGATES: 'get-feedback-aggregates'
+  SET_FEEDBACK_AGGREGATE: 'set-feedback-aggregate'
   LIST_TMUX_SESSIONS: 'list-tmux-sessions'
   GET_GIT_DIFF: 'get-git-diff'
 }
@@ -82,7 +103,13 @@ export const IPC: IpcChannels = {
   GET_SETTINGS: 'get-settings',
   SET_SETTINGS: 'set-settings',
   GET_HISTORY: 'get-history',
+  ADD_HISTORY_ENTRY: 'add-history-entry',
   CLEAR_HISTORY: 'clear-history',
+  GET_PRESETS: 'get-presets',
+  SET_PRESET: 'set-preset',
+  DELETE_PRESET: 'delete-preset',
+  GET_FEEDBACK_AGGREGATES: 'get-feedback-aggregates',
+  SET_FEEDBACK_AGGREGATE: 'set-feedback-aggregate',
   LIST_TMUX_SESSIONS: 'list-tmux-sessions',
   GET_GIT_DIFF: 'get-git-diff',
 }
