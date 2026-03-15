@@ -1,6 +1,6 @@
 dataDir: ~/.agent-orchestrator
 worktreeDir: ~/.worktrees
-port: 3000
+port: 3001
 defaults:
   runtime: tmux
   agent: claude-code
@@ -12,3 +12,102 @@ projects:
     repo: burningportra/PromptBetter
     path: /Volumes/1tb/Projects/PromptBetter
     defaultBranch: main
+    agentConfig:
+      permissions: skip
+    agentRules: |-
+      Non-negotiable operating mode:
+      1. Run unattended end-to-end. Do not ask a human for next steps unless status is blocked.
+      2. Use the GitHub issue and PR as your system of record.
+      3. Maintain exactly one status label on the issue at all times (see Status Labels below).
+
+      Status labels — keep exactly one at all times:
+        status:in-progress  — actively implementing
+        status:rework       — addressing review feedback
+        status:human-review — PR submitted, waiting for peer agent or human review
+        status:merging      — review approved, merging now
+        status:done         — merged and closed
+        status:blocked      — cannot proceed, human action required
+
+      Status label commands:
+        Set label:    gh issue edit <number> --repo burningportra/PromptBetter --add-label "status:in-progress" --remove-label "status:open"
+        (Always --remove-label the previous status when adding the new one.)
+
+      Execution loop:
+      1. READ   — Read the full issue. Set status:in-progress.
+      2. PLAN   — Post "## Agent Workpad" comment with a numbered checklist. No code yet.
+      3. IMPLEMENT — Work through checklist items. Keep workpad updated as you go.
+      4. VALIDATE — Run tests/checks from the issue (or smallest meaningful proof if none specified).
+                    Do NOT proceed to SELF-REVIEW if validation fails — fix and re-validate.
+      5. SELF-REVIEW — Read over all of the new code you just wrote and other existing code you just
+                    modified with "fresh eyes" looking super carefully for any obvious bugs, errors,
+                    problems, issues, confusion, etc. Carefully fix anything you uncover.
+                    - Also check for scope creep, hardcoded values, secrets, regressions.
+                    - Record "Self-review complete: <findings or 'none'>" in workpad.
+      6. PEER-REVIEW — Find other open PRs: `gh pr list --repo burningportra/PromptBetter --state open`
+                    - Turn your attention to reviewing the code written by your fellow agents and checking
+                      for any issues, bugs, errors, problems, inefficiencies, security problems, reliability
+                      issues, etc. and carefully diagnose their underlying root causes using first-principle
+                      analysis and then fix or revise them if necessary. Don't restrict yourself to the
+                      latest commits, cast a wider net and go super deep! Use /effort max.
+                    - Post a substantive COMMENT/APPROVE/REQUEST_CHANGES with your findings.
+                    - If no eligible PR exists, record "no-peer-pr-available" in workpad and continue.
+      7. TEST COVERAGE AUDIT — Ask yourself:
+                    - Do we have full unit test coverage without using mocks/fake/stub objects?
+                    - Do we have complete end-to-end integration test scripts with great, detailed logging?
+                    - If either answer is NO, do NOT open a PR yet. Instead:
+                      a. Create a comprehensive and granular set of GitHub issues for all missing coverage,
+                         with tasks, subtasks, and dependency structure, overlaid with detailed comments
+                         explaining what each test must prove and why.
+                         Use: `gh issue create --repo burningportra/PromptBetter --title "..." --body "..."`
+                      b. Implement the missing tests now before continuing.
+                      c. Re-run the full validation gate (step 4) with the new tests passing.
+                    - Only proceed to OPEN PR when test coverage is complete and all tests pass.
+      8. OPEN PR — Branch from latest main. Push. Create PR with body containing:
+                    - Summary of changes
+                    - Validation commands and outcomes
+                    - Risk/rollback notes
+                    - Link to issue
+                   Set status:human-review on the issue.
+      9. REVIEW LOOP — Poll `gh pr view --json reviews,statusCheckRollup,reviewDecision` every turn.
+                    - CI failing → fix, push, stay in review loop.
+                    - Changes requested → address all comments, push, set status:rework, return to step 5.
+                    - Approved + CI green → set status:merging, proceed to MERGE.
+                    - If stuck > 3 cycles → set status:blocked, post exact blocker in workpad, stop.
+      10. MERGE  — `gh pr merge --squash --auto --repo burningportra/PromptBetter`
+                    Set status:done. Post final workpad update summarizing what was done.
+
+      Implementation requirements:
+      - Stay strictly within issue scope.
+      - Keep changes minimal and deterministic.
+      - Do not add secrets or hardcoded paths (use env vars).
+      - If extra work is discovered, file a separate GitHub issue and continue.
+      - Use conventional commits (feat:, fix:, chore:, docs:, refactor:, test:).
+      - Include issue number in commit messages (e.g. "feat: add mutator (#4)").
+
+      Blocked handling:
+      - Set status:blocked immediately when: missing tokens/permissions, unresolvable conflict, or > 3 failed retry cycles.
+      - Post the exact command or action a human must take to unblock in the workpad.
+      - Do not loop or retry indefinitely — stop after posting the blocker.
+    orchestratorRules: |-
+      Issues are numbered by phase: [1.x] = Phase 1, [2.x] = Phase 2, [3.x] = Phase 3, [4.x] = Phase 4.
+      NEVER spawn a higher phase issue if any lower phase PRs are still open or unmerged.
+      Within a phase, issues are safe to spawn in parallel ONLY if they touch different files.
+      Phase 1 files (safe to parallelize): mutator.py, runner.py, evaluator.py, logger.py, validator.py.
+      Phase 2 builds on Phase 1 output — wait for all Phase 1 PRs to merge before spawning any [2.x] issue.
+      Phase 3 builds on Phase 2 — wait for all Phase 2 PRs to merge before spawning any [3.x] issue.
+      Before spawning, always run `ao status` to check for existing sessions on the same issue.
+      After spawning a session, wait until `ao session ls` shows it as [working] before sending any message to it.
+      Poll with: `ao session ls -p PromptBetter` every 10 seconds until status changes from [spawning] to [working].
+      If an agent is stuck or needs_input, attach and unblock it before spawning new sessions.
+
+      Reviewer/merger role — run this loop continuously while worker agents are active:
+      1. `gh pr list --repo burningportra/PromptBetter --state open --json number,title,labels,reviews,statusCheckRollup`
+      2. For each PR with status:human-review and no pending review:
+         - Review the diff: `gh pr diff <number>`
+         - Post APPROVE if correct, REQUEST_CHANGES with specific comments if not.
+      3. For each PR that is approved + CI green (status:merging):
+         - `gh pr merge <number> --squash --auto --repo burningportra/PromptBetter`
+      4. After merge, verify the issue is labeled status:done. If not, update it.
+      5. Check for status:blocked issues and notify human with exact unblock action.
+      6. Repeat every 2 minutes.
+
